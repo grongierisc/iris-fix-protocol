@@ -18,7 +18,8 @@ class FixBusinessOperation(BusinessOperation):
             self.initiator.start()
             
         except (quickfix.ConfigError, quickfix.RuntimeError) as e:
-            self.initiator.stop()
+            if hasattr(self,'initiator'):
+                self.initiator.stop()
             raise e
             
 
@@ -28,21 +29,22 @@ class FixBusinessOperation(BusinessOperation):
     def on_message(self, request):
         self.application.put_new_order()
         
-class Application(quickfix.Application):
+class Application(quickfix.Application,BusinessOperation):
     """FIX Application"""
     execID = 0
 
     def onCreate(self, sessionID):
-        print("onCreate : Session (%s)" % sessionID.toString())
+        self.sessionID = sessionID
+        self.log_info("onCreate : Session (%s)" % sessionID.toString())
         return
 
     def onLogon(self, sessionID):
         self.sessionID = sessionID
-        print("Successful Logon to session '%s'." % sessionID.toString())
+        self.log_info("Successful Logon to session '%s'." % sessionID.toString())
         return
 
     def onLogout(self, sessionID):
-        print("Session (%s) logout !" % sessionID.toString())
+        self.log_info("Session (%s) logout !" % sessionID.toString())
         return
 
     def toAdmin(self, message, sessionID):
@@ -93,3 +95,7 @@ class Application(quickfix.Application):
 
         quickfix.Session.sendToTarget(message, self.sessionID)
 
+if __name__ == '__main__':
+    bo = FixBusinessOperation()
+    bo.on_init()
+    bo.on_message('')
