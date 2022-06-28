@@ -4,11 +4,15 @@
  zn "IRISAPP"
  zpm "install pex-embbeded-python" 
  do $System.OBJ.LoadDir("/irisdev/app/src","ck",,1)
+ zw $SYSTEM.OBJ.ImportDir("/irisdev/app/src", "*.cls", "cubk", .tErrors, 1)
  zpm "install sslclient"
 
  //Register Python code
- zw ##class(Grongier.PEX.Utils).RegisterComponent("bo","FixBusinessOperation","/irisdev/app/src/fix/",1,"FIX.bo.FixBusinessOperation")
- set ^EnsPortal.Settings("SuperUser","LastProduction")	= "FIX.Production"
+  
+ zw ##class(Grongier.PEX.Utils).RegisterComponent("bo","FixBusinessOperation","/irisdev/app/src/fix/",1,"Python.FixBusinessOperation")
+ zw ##class(Grongier.PEX.Utils).RegisterComponent("bo","Application","/irisdev/app/src/fix/",1,"Python.Application")
+ 
+ set ^EnsPortal.Settings("SuperUser","LastProduction")	= "INFORMATION.QuickFixProduction"
  
  zn "%SYS"
  Do ##class(Security.Users).UnExpireUserPasswords("*")

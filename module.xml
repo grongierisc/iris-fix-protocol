@@ -3,7 +3,7 @@
   <Document name="interoperability-sample.ZPM">
     <Module>
       <Name>interoperability-sample</Name>
-      <Description>A simple IRIS interoperability application - reads data from Reddit and filter it.</Description>
+      <Description>A QuickFix implementation in IRIS Python</Description>
       <Version>0.0.3</Version>
       <Packaging>module</Packaging>
       <Dependencies>
@@ -15,8 +15,6 @@
       <SourcesRoot>src</SourcesRoot>
       <Resource Name="Ens.Config.DefaultSettings.ESD"/>
       <Resource Name="TestLookupTable.LUT"/>
-      <Resource Name="dc.Reddit.PKG"/>
-      <Resource Name="dc.Demo.PKG"/>
       <SystemRequirements Version=">=2020.1" Interoperability="enabled" />
     </Module>
   </Document>

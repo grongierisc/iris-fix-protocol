@@ -1,0 +1,6 @@
+/usr/irissys/bin/irispython
+
+from grongier.pex._utils import register_component
+
+register_component("bo","FixBusinessOperation","/irisdev/app/src/fix/",1,"Python.FixBusinessOperation")
+register_component("bo","Application","/irisdev/app/src/fix/",1,"Python.Application")
