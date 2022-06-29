@@ -3,4 +3,8 @@ from grongier.pex import Message
 
 @dataclass
 class NewOrderRequest(Message):
-    pass
+    symbol:str = None
+    quantity:str = None
+    price:str = None
+    side:str = None
+    order_type:str = None
