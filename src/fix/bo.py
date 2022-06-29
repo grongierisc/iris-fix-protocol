@@ -7,60 +7,30 @@ __SOH__ = chr(1)
 class FixBusinessOperation(BusinessOperation):
     def on_init(self):
         try:
-            # We gather the base information of the session : the ids
-            # Note : If a new session is created it needs to be added to the acceptor or nothing will happen ( shouldn't be done automatically or it will break the point of having an acceptor )
-            if not hasattr(self,'config_file'):
-                self.config_file='/irisdev/app/src/fix/client.cfg'
-            if not hasattr(self,"BeginString"):
-                self.BeginString = "FIX.4.3"
-            if not hasattr(self,"SenderCompID"):
-                self.SenderCompID = "CLIENT"
-            if not hasattr(self,"TargetCompID"):
-                self.TargetCompID = "SERVER"
+            # We create a SessionSettings and get it's settings dict
+            session_settings = quickfix.SessionSettings()
+            settings_dict = session_settings.get()
             
-            # We open our base config file and modify it's session to match ours
-            list_of_lines = []
-            with open(self.config_file, "r") as config_file:
-                list_of_lines = config_file.readlines()
-
-                for i in range(len(list_of_lines)):
-                    if list_of_lines[i] == "BeginString=FIX.4.3\n":
-                        list_of_lines[i] = "BeginString={}\n".format(self.BeginString)
-                    elif list_of_lines[i] == "SenderCompID=CLIENT\n":
-                        list_of_lines[i] = "SenderCompID={}\n".format(self.SenderCompID)
-                    elif list_of_lines[i] == "TargetCompID=SERVER\n":
-                        list_of_lines[i] = "TargetCompID={}\n".format(self.TargetCompID)
-
-            tmp_name = "tmp.cfg"
-            with open(tmp_name,"w") as tmp_config_file:
-                tmp_config_file.writelines(list_of_lines)
-
-            # We get the SessionsSettings ( with the right session )
-            settings = quickfix.SessionSettings(tmp_name)
-
-            # We get the mutable object of the settings ( reference and not copy ) using the session ids
-            session_settings = settings.get(quickfix.SessionID(self.BeginString,self.SenderCompID,self.TargetCompID))
-
-            # We get all the attr that are in self but not in the base BusinessOperation class and are not the ids
-            base_attr = set(dir(BusinessOperation))
-            other_attr = set(("config_file","beginString","senderCompID",'targetCompID'))
-            config_attr = set(dir(self)).difference(base_attr)
-            config_attr = config_attr.difference(other_attr)
+            # We get all the attr that are in self but not in the base BusinessOperation class
+            config_attr = set(dir(self)).difference(set(dir(BusinessOperation))).difference(set(['new_order']))
 
             # For every one of them we add them to the settings using the setString method ( replace it if exists, create it if not)
-            # See if it works with int like for "ReconnectInterval"
             for attr in config_attr:
-                session_settings.setString(attr,getattr(self, attr))
+                settings_dict.setString(attr,getattr(self, attr))
 
-            # Create our Application and apply our settings
+            # We set our session with the session IDs and the settings we want for it
+            session_settings.set(quickfix.SessionID(self.BeginString,self.SenderCompID,self.TargetCompID),settings_dict)
+
+            # Create our Application and apply our sessions_settings
             self.application = Application()
-            storefactory = quickfix.FileStoreFactory(settings)
-            logfactory = quickfix.FileLogFactory(settings)
-            self.initiator = quickfix.SocketInitiator(self.application, storefactory, settings, logfactory)
+            storefactory = quickfix.FileStoreFactory(session_settings)
+            logfactory = quickfix.FileLogFactory(session_settings)
+            self.initiator = quickfix.SocketInitiator(self.application, storefactory, session_settings, logfactory)
 
             # Start the initiator
             self.initiator.start()
-            
+
+
         except (quickfix.ConfigError, quickfix.RuntimeError) as e:
             if hasattr(self,'initiator'):
                 self.initiator.stop()
@@ -71,7 +41,10 @@ class FixBusinessOperation(BusinessOperation):
         self.initiator.stop()
 
     def on_message(self, request):
-        self.application.put_new_order()
+        pass
+    
+    def new_order(self,request:NewOrderRequest):
+        self.application.put_new_order(request)
         
 class Application(quickfix.Application,BusinessOperation):
     """FIX Application"""
@@ -90,7 +63,7 @@ class Application(quickfix.Application,BusinessOperation):
     def onLogout(self, sessionID):
         self.log_info("Session (%s) logout !" % sessionID.toString())
         return
-
+        
     def toAdmin(self, message, sessionID):
         msg = message.toString().replace(__SOH__, "|")
         self.log_info("(Admin) S >> %s" % msg)
@@ -120,6 +93,36 @@ class Application(quickfix.Application,BusinessOperation):
         self.execID += 1
         return str(self.execID).zfill(5)
 
+    def new_order(self,request:NewOrderRequest):
+        sender_comp_id, target_comp_id, symbol, quantity, price, side, order_type = ""
+
+        if side.lower() == "buy":
+            side = quickfix.Side_BUY
+        else:
+            side = quickfix.Side_SELL
+
+        message = quickfix.Message()
+        header = message.getHeader()
+        header.setField(quickfix.BeginString("FIX.4.2"))
+        header.setField(quickfix.SenderCompID(sender_comp_id))
+        header.setField(quickfix.TargetCompID(target_comp_id))
+        header.setField(quickfix.MsgType("D"))
+        #ord_id = get_order_id(sender_comp_id, symbol)
+        message.setField(quickfix.ClOrdID(ord_id))
+        message.setField(quickfix.Symbol(symbol))
+        message.setField(quickfix.Side(side))
+        message.setField(quickfix.Price(float(price)))
+        if order_type.lower() == "market":
+            message.setField(quickfix.OrdType(quickfix.OrdType_MARKET))
+        else:
+            message.setField(quickfix.OrdType(quickfix.OrdType_LIMIT))
+        message.setField(quickfix.HandlInst(quickfix.HandlInst_MANUAL_ORDER_BEST_EXECUTION))
+        message.setField(quickfix.TransactTime())
+        message.setField(quickfix.OrderQty(float(quantity)))
+        message.setField(quickfix.Text(f"{side} {symbol} {quantity}@{price}"))
+
+        return message
+
     def put_new_order(self):
         """Request sample new order single"""
         message = quickfix.Message()
@@ -141,9 +144,3 @@ class Application(quickfix.Application,BusinessOperation):
         message.setField(trstime)
 
         quickfix.Session.sendToTarget(message, self.sessionID)
-
-
-if __name__ == '__main__':
-    bo = FixBusinessOperation()
-    bo.on_init()
-    bo.on_message('')

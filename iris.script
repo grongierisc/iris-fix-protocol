@@ -12,7 +12,7 @@
  zw ##class(Grongier.PEX.Utils).RegisterComponent("bo","FixBusinessOperation","/irisdev/app/src/fix/",1,"Python.FixBusinessOperation")
  zw ##class(Grongier.PEX.Utils).RegisterComponent("bo","Application","/irisdev/app/src/fix/",1,"Python.Application")
  
- set ^EnsPortal.Settings("SuperUser","LastProduction")	= "INFORMATION.QuickFixProduction"
+ set ^EnsPortal.Settings("SuperUser","LastProduction")	= "fix.QuickFixProduction"
  
  zn "%SYS"
  Do ##class(Security.Users).UnExpireUserPasswords("*")
