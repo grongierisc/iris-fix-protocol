@@ -12,7 +12,10 @@ This demo has for objective to simulate a FIX client, allowing the user to creat
 - If you use VSCode, you should have seen some pop up in the right corner, if you press `open in container` all the needed extensions will be installed but this step is not necessary.
 
 See [this website](https://new.quickfixn.org/c/documentation/) for the general documentation.<br>
-See [this website](https://www.onixs.biz/fix-dictionary/4.4/fields_by_tag.html#) for the tags documentation.
+
+See [this website](https://www.onixs.biz/fix-dictionary/4.3/fields_by_tag.html#) for the tags documentation.<br>
+
+See [this website](https://www.onixs.biz/fix-dictionary/4.3/msgs_by_msg_type.html) for the Message Types.<br>
 
 
 # The demo
@@ -88,6 +91,9 @@ You must first start the demo, using the green `Start` button or `Stop` and `Sta
 Then, by clicking on the operation `Python.FixBusinessOperation` of your choice, and selecting in the right tab `action`, you can `test` the demo.
 
 In this `test` window, select :<br>
+
+
+**New Order Buy**
 Type of request : `Grongier.PEX.Message`<br>
 
 For the `classname` you must enter :
@@ -105,6 +111,17 @@ msg.NewOrderRequest
     "order_type":"limit"
 }
 ```
+Now you can click on `Visual Trace` to see in details what happened and see the logs of the initiator.
+
+<br><br>
+
+**New Order Sell**
+Type of request : `Grongier.PEX.Message`<br>
+
+For the `classname` you must enter :
+```
+msg.NewOrderRequest
+```
 
 By using "side":"sell" we can send make a simple sell order :
 ```
@@ -116,7 +133,49 @@ By using "side":"sell" we can send make a simple sell order :
     "order_type":"limit"
 }
 ```
+Now you can click on `Visual Trace` to see in details what happened and see the logs of the initiator.
 
+<br><br>
+
+
+**Existing Order Replace** WIP
+For this you will need to have send an order request buy or sell.
+By entering the original client order id of the request and it's symbol, you can replace it.
+
+Type of request : `Grongier.PEX.Message`<br>
+
+For the `classname` you must enter :
+```
+msg.ReplaceOrderRequest
+```
+```
+{
+    "symbol":"MSFT",
+    "quantity":"1000",
+    "price":"1000",
+    "side":"buy",
+    "orig_client_order_id":"00001"
+}
+```
+Now you can click on `Visual Trace` to see in details what happened and see the logs of the initiator.
+
+**Existing Order Delete** WIP
+For this you will need to have send an order request buy or sell.
+By entering the original client order id of the request and it's symbol, you can delete it.
+
+Type of request : `Grongier.PEX.Message`<br>
+
+For the `classname` you must enter :
+```
+msg.DeleteOrderRequest
+```
+```
+{
+    "symbol":"MSFT",
+    "side":"buy",
+    "orig_client_order_id":"00001"
+}
+```
 Now you can click on `Visual Trace` to see in details what happened and see the logs of the initiator.
 
 ## Using the server demo : Acceptor

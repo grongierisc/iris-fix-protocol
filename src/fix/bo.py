@@ -1,8 +1,10 @@
 from grongier.pex import BusinessOperation
 from datetime import datetime
-import quickfix
 
-from msg import NewOrderRequest
+import quickfix
+import quickfix43
+
+from msg import NewOrderRequest,ReplaceOrderRequest,DeleteOrderRequest
 
 __SOH__ = chr(1)
 
@@ -14,7 +16,7 @@ class FixBusinessOperation(BusinessOperation):
             settings_dict = session_settings.get()
             
             # We get all the attr that are in self but not in the base BusinessOperation class
-            config_attr = set(dir(self)).difference(set(dir(BusinessOperation))).difference(set(['new_order','genExecID']))
+            config_attr = set(dir(self)).difference(set(dir(BusinessOperation))).difference(set(['new_order','genExecID','replace_order','delete_order']))
 
             # For every one of them we add them to the settings using the setString method ( replace it if exists, create it if not)
             for attr in config_attr:
@@ -41,7 +43,6 @@ class FixBusinessOperation(BusinessOperation):
             if hasattr(self,'initiator'):
                 self.initiator.stop()
             raise e
-        self.log_info("init done")
             
 
     def on_tear_down(self):
@@ -81,10 +82,47 @@ class FixBusinessOperation(BusinessOperation):
 
         quickfix.Session.sendToTarget(message, self.sessionID)
         
+    def replace_order(self,request:ReplaceOrderRequest):
+        if request.side.lower() == "buy":
+            side = quickfix.Side_BUY
+        else:
+            side = quickfix.Side_SELL
+
+        message = quickfix43.OrderCancelReplaceRequest()
+        message.setField(quickfix.OrigClOrdID(request.orig_client_order_id))
+        message.setField(quickfix.ClOrdID(self.genExecID()))
+        message.setField(quickfix.Symbol(request.symbol))
+        message.setField(quickfix.Side(side))
+        message.setField(quickfix.Price(float(request.price)))
+        message.setField(quickfix.OrdType(quickfix.OrdType_LIMIT))
+        message.setField(quickfix.HandlInst(quickfix.HandlInst_MANUAL_ORDER_BEST_EXECUTION))
+        message.setField(quickfix.TransactTime())
+        message.setField(quickfix.OrderQty(float(request.quantity)))
+        message.setField(quickfix.Text(f"{request.side} {request.symbol} {request.quantity}@{request.price}"))
+
+        quickfix.Session.sendToTarget(message, self.sessionID)
+
+    def delete_order(self,request:DeleteOrderRequest):
+        if request.side.lower() == "buy":
+            side = quickfix.Side_BUY
+        else:
+            side = quickfix.Side_SELL
+      
+        message = quickfix43.OrderCancelRequest()
+        message.setField(quickfix.OrigClOrdID(request.orig_client_order_id))
+        message.setField(quickfix.ClOrdID(self.genExecID()))
+        message.setField(quickfix.Symbol(request.symbol))
+        message.setField(quickfix.Side(side))
+        message.setField(quickfix.TransactTime())
+        message.setField(quickfix.Text(f"Delete {request.orig_client_order_id}")) 
+
+        quickfix.Session.sendToTarget(message, self.sessionID)
+
+
 class Application(quickfix.Application,BusinessOperation):
     """FIX Application"""
-    execID = 0
 
+    execID = 0
     def onCreate(self, sessionID):
         self.sessionID = sessionID
         self.log_info("onCreate : Session (%s)" % sessionID.toString())
@@ -123,7 +161,3 @@ class Application(quickfix.Application,BusinessOperation):
     def onMessage(self, message, sessionID):
         """Processing application message here"""
         pass
-
-    def genExecID(self):
-        self.execID += 1
-        return str(self.execID).zfill(5)
