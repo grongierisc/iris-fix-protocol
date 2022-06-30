@@ -65,7 +65,7 @@ ConnectionType=initiator
 FileLogPath=./Logs/
 StartTime=00:00:00
 EndTime=00:00:00
-ReconnectInterval=60
+ReconnectInterval=10
 LogoutTimeout=5
 LogonTimeout=30
 ResetOnLogon=Y
@@ -186,14 +186,15 @@ The acceptor is isolated in another container, to access it's logs you must go t
 Here you can see the logs for each session.
 
 ### New acceptor session
+
 If you are familiar with the FIX protocol, you now that creating a session on the client side without adding it to the server side will lead to an error, which is logical as security and reliability are key words for the FIX protocol.
 
 To add a new session to the acceptor you must go to `acceptor/server.cfg` and add at the end of the file the sessions you wish to add.
 
 Now you can enter in the terminal :
 ```sh
-docker-compose restart acceptor
+docker-compose up -d --build acceptor
 ```
 
-**Note that this will close the acceptor and restart it so it may lead to issues regarding sent requests**, therefore we advise you to stop the client production before restarting the acceptor then, when the restart is complete, to restart the client production.
+**Note that this will close the acceptor and restart it so it may lead to issues regarding sent requests and stored data**
 
