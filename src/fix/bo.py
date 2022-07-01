@@ -83,6 +83,8 @@ class FixBusinessOperation(quickfix.Application,BusinessOperation):
         
     def replace_order(self,request:ReplaceOrderRequest):
 
+        time.sleep(2)
+
         if request.side.lower() == "buy":
             side = quickfix.Side_BUY
         else:
@@ -101,8 +103,11 @@ class FixBusinessOperation(quickfix.Application,BusinessOperation):
         message.setField(quickfix.Text(f"{request.side} {request.symbol} {request.quantity}@{request.price}"))
 
         quickfix.Session.sendToTarget(message, self.sessionID)
+        time.sleep(2)
+
 
     def delete_order(self,request:DeleteOrderRequest):
+        time.sleep(2)
 
         if request.side.lower() == "buy":
             side = quickfix.Side_BUY
@@ -113,11 +118,14 @@ class FixBusinessOperation(quickfix.Application,BusinessOperation):
         message.setField(quickfix.OrigClOrdID(request.orig_client_order_id))
         message.setField(quickfix.ClOrdID(self.genExecID()))
         message.setField(quickfix.Symbol(request.symbol))
+        message.setField(quickfix.OrdType(quickfix.OrdType_LIMIT))
         message.setField(quickfix.Side(side))
         message.setField(quickfix.TransactTime())
         message.setField(quickfix.Text(f"Delete {request.orig_client_order_id}")) 
 
         quickfix.Session.sendToTarget(message, self.sessionID)
+        time.sleep(2)
+
 
     def genExecID(self):
         self.execID += 1
