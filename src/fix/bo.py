@@ -1,12 +1,11 @@
 from grongier.pex import BusinessOperation
-from datetime import datetime
 
 import time
 
 import quickfix
 import quickfix43
 
-from msg import NewOrderRequest,ReplaceOrderRequest,DeleteOrderRequest,HeartBeatRequest
+from msg import NewOrderRequest,ReplaceOrderRequest,DeleteOrderRequest
 
 __SOH__ = chr(1)
 
@@ -18,7 +17,7 @@ class FixBusinessOperation(quickfix.Application,BusinessOperation):
             settings_dict = session_settings.get()
             
             # We get all the attr that are in self but not in the base BusinessOperation class
-            config_attr = set(dir(self)).difference(set(dir(BusinessOperation))).difference(set(['this','new_order','genExecID','replace_order','delete_order','onMessage','artificial_heart_beat'])).difference(set(dir(quickfix.Application)))
+            config_attr = set(dir(self)).difference(set(dir(BusinessOperation))).difference(set(['this','new_order','genExecID','replace_order','delete_order','onMessage'])).difference(set(dir(quickfix.Application)))
 
             # For every one of them we add them to the settings using the setString method ( replace it if exists, create it if not)
             for attr in config_attr:
@@ -31,7 +30,6 @@ class FixBusinessOperation(quickfix.Application,BusinessOperation):
             session_settings.set(self.sessionID,settings_dict)
 
             # Create our Application and apply our sessions_settings
-            #self.application = Application()
             storefactory = quickfix.FileStoreFactory(session_settings)
             logfactory = quickfix.FileLogFactory(session_settings)
             self.initiator = quickfix.SocketInitiator(self, storefactory, session_settings, logfactory)
@@ -54,16 +52,9 @@ class FixBusinessOperation(quickfix.Application,BusinessOperation):
         self.log_info("on_message")
         return 
 
-    def genExecID(self):
-        self.execID += 1
-        return str(self.execID).zfill(5)
-
-    def artificial_heart_beat(self,request:HeartBeatRequest):
-        message = quickfix43.Heartbeat()
-        quickfix.Session.sendToTarget(message, self.sessionID)
-        return 
-
     def new_order(self,request:NewOrderRequest):
+        
+        #time.sleep(2)
 
         if request.side.lower() == "buy":
             side = quickfix.Side_BUY
@@ -128,6 +119,10 @@ class FixBusinessOperation(quickfix.Application,BusinessOperation):
 
         quickfix.Session.sendToTarget(message, self.sessionID)
 
+    def genExecID(self):
+        self.execID += 1
+        return str(self.execID).zfill(5)
+
     def onCreate(self, sessionID):
         self.sessionID = sessionID
         self.log_info("onCreate : Session (%s)" % sessionID.toString())
@@ -142,18 +137,14 @@ class FixBusinessOperation(quickfix.Application,BusinessOperation):
         self.log_info("Session (%s) logout !" % sessionID.toString())
         return
         
-    def toAdmin(self, message, sessionID):
-        #msg = message.toString().replace(__SOH__, "|")
-        #self.log_info("(Admin) S >> %s" % msg)
+    def toAdmin(self, message, sessionID):        
         msg = message.toString().replace(__SOH__, "|")
-        print("(Admin) S >> %s" % msg)
+        self.log_info("(Admin) S >> %s" % msg)
         return
         
     def fromAdmin(self, message, sessionID):
-        #msg = message.toString().replace(__SOH__, "|")
-        #self.log_info("(Admin) R << %s" % msg)
         msg = message.toString().replace(__SOH__, "|")
-        print("(Admin) R << %s" % msg)
+        self.log_info("(Admin) R << %s" % msg)
         return
 
     def toApp(self, message, sessionID):
@@ -176,7 +167,7 @@ if __name__ == '__main__':
     bo.BeginString='FIX.4.3'
     bo.SenderCompID='CLIENT'
     bo.TargetCompID='SERVER'
-    bo.HeartBtInt='30'
+    bo.HeartBtInt='5'
     bo.SocketConnectPort='3000'
     bo.SocketConnectHost='acceptor'
     bo.DataDictionary='/irisdev/app/src/fix/spec/FIX43.xml'

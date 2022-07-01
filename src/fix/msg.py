@@ -22,7 +22,3 @@ class DeleteOrderRequest(Message):
     symbol:str = None
     side:str = None
     orig_client_order_id:str = None
-
-@dataclass
-class HeartBeatRequest(Message):
-    pass

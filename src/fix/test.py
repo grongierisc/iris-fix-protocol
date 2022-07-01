@@ -1,3 +1,4 @@
-import quickfix43
+from grongier.pex import OutboundAdapter
+from grongier.pex import InboundAdapter
 
-print(dir(quickfix43.Heartbeat))
+print(set(dir(InboundAdapter)).difference(set(dir(OutboundAdapter))))
