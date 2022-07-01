@@ -54,7 +54,7 @@ class FixBusinessOperation(quickfix.Application,BusinessOperation):
 
     def new_order(self,request:NewOrderRequest):
         
-        #time.sleep(2)
+        time.sleep(2)
 
         if request.side.lower() == "buy":
             side = quickfix.Side_BUY
