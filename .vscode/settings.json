@@ -12,10 +12,9 @@
         "service": "iris",
         "internalPort": 52773
       },
-      "active": true,
+      "active": false,
       "links": {
         "Production": "http://localhost:${port}/csp/irisapp/EnsPortal.ProductionConfig.zen?PRODUCTION=fix.QuickFixProduction"
-        
       }
     },
     "sqltools.connections": [

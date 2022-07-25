@@ -1,7 +1,7 @@
 FROM python:3.9
 ENV WORKING_DIR /app
 WORKDIR ${WORKING_DIR}
-COPY ./requirements.txt ${WORKING_DIR}/requirements.txt
+COPY ./acceptor/requirements.txt ${WORKING_DIR}/requirements.txt
 RUN pip install -U pip && pip install -r ${WORKING_DIR}/requirements.txt
 ADD . ${WORKING_DIR}
 RUN rm -fr ${WORKING_DIR}/initiator/Logs/*

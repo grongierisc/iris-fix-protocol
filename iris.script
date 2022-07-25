@@ -9,9 +9,15 @@
 
  //Register Python code
   
- zw ##class(Grongier.PEX.Utils).RegisterComponent("bo","FixBusinessOperation","/irisdev/app/src/fix/",1,"Python.FixBusinessOperation")
- zw ##class(Grongier.PEX.Utils).RegisterComponent("bo","Application","/irisdev/app/src/fix/",1,"Python.Application")
- 
+ zw ##class(Grongier.PEX.Utils).RegisterComponent("bo","FixOrderOperation","/irisdev/app/src/fix/",1,"Python.FixOrderOperation")
+ zw ##class(Grongier.PEX.Utils).RegisterComponent("adapter","OrderAdapter","/irisdev/app/src/fix/",1,"Python.OrderAdapter")
+
+ zw ##class(Grongier.PEX.Utils).RegisterComponent("bo","FixQuoteOperation","/irisdev/app/src/fix/",1,"Python.FixQuoteOperation")
+ zw ##class(Grongier.PEX.Utils).RegisterComponent("adapter","QuoteAdapter","/irisdev/app/src/fix/",1,"Python.QuoteAdapter")
+
+ zw ##class(Grongier.PEX.Utils).RegisterComponent("bp","FixBusinessProcess","/irisdev/app/src/fix/",1,"Python.FixBusinessProcess")
+
+
  set ^EnsPortal.Settings("SuperUser","LastProduction")	= "fix.QuickFixProduction"
  
  zn "%SYS"

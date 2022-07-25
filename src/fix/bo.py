@@ -1,60 +1,55 @@
 from grongier.pex import BusinessOperation
 
-import time
-
 import quickfix
 import quickfix43
 
-from msg import NewOrderRequest,ReplaceOrderRequest,DeleteOrderRequest
+from msg import OrderRequest,FixResponse,QuoteRequest
 
 __SOH__ = chr(1)
 
-class FixBusinessOperation(quickfix.Application,BusinessOperation):
+class FixOrderOperation(BusinessOperation):
+
+    def get_adapter_type():
+        """
+        Get the Application adapter needed for quickfix
+        """
+        return "Python.OrderAdapter"
+
+
     def on_init(self):
-        try:
-            # We create a SessionSettings and get it's settings dict
-            session_settings = quickfix.SessionSettings()
-            settings_dict = session_settings.get()
-            
-            # We get all the attr that are in self but not in the base BusinessOperation class
-            config_attr = set(dir(self)).difference(set(dir(BusinessOperation))).difference(set(['this','new_order','genExecID','replace_order','delete_order','onMessage'])).difference(set(dir(quickfix.Application)))
-
-            # For every one of them we add them to the settings using the setString method ( replace it if exists, create it if not)
-            for attr in config_attr:
-                self.log_info(attr + str(getattr(self,attr)))
-                settings_dict.setString(attr,getattr(self, attr))
-
-            self.sessionID = quickfix.SessionID(self.BeginString,self.SenderCompID,self.TargetCompID)
-
-            # We set our session with the session IDs and the settings we want for it
-            session_settings.set(self.sessionID,settings_dict)
-
-            # Create our Application and apply our sessions_settings
-            storefactory = quickfix.FileStoreFactory(session_settings)
-            logfactory = quickfix.FileLogFactory(session_settings)
-            self.initiator = quickfix.SocketInitiator(self, storefactory, session_settings, logfactory)
-
-            self.execID = 0
-
-            # Start the initiator
-            self.initiator.start()
-
-        except (quickfix.ConfigError, quickfix.RuntimeError) as e:
-            if hasattr(self,'initiator'):
-                self.initiator.stop()
-            raise e
+        # We create a SessionSettings and get its settings dict
+        session_settings = quickfix.SessionSettings()
+        settings_dict = session_settings.get()
         
+        # We get all the attr that are in self but not in the base BusinessOperation class
+        config_attr = set(dir(self)).difference(set(dir(BusinessOperation))).difference(set(['new_order','genExecID','replace_order','delete_order','generate_message','new_quote']))
+
+        # For every one of them we add them to the settings using the setString method ( replace it if exists, create it if not)
+        for attr in config_attr:
+            self.log_info(attr + " : " + str(getattr(self,attr)))
+            settings_dict.setString(attr,getattr(self, attr))
+
+        
+        sessionID = quickfix.SessionID(self.BeginString,self.SenderCompID,self.TargetCompID)
+
+        # We set our session with the session IDs and the settings we want for it
+        session_settings.set(sessionID,settings_dict)
+
+        # Create our Application and apply our sessions_settings
+        storefactory = quickfix.FileStoreFactory(session_settings)
+        logfactory = quickfix.FileLogFactory(session_settings)
+        
+        # Create the initiator inside the adapter
+        self.adapter.init_initiator(storefactory,session_settings,logfactory,sessionID,self.Username,self.Password,self.DeliverToCompID,self.SenderSubID)        
             
     def on_tear_down(self):
-        self.initiator.stop()
+        self.adapter.stop_initiator()
 
     def on_message(self, request):
         self.log_info("on_message")
         return 
 
-    def new_order(self,request:NewOrderRequest):
-        
-        time.sleep(2)
+    def new_order(self,request:OrderRequest):
 
         if request.side.lower() == "buy":
             side = quickfix.Side_BUY
@@ -62,159 +57,115 @@ class FixBusinessOperation(quickfix.Application,BusinessOperation):
             side = quickfix.Side_SELL
 
         message = quickfix.Message()
+
         header = message.getHeader()
-        header.setField(quickfix.MsgType("D"))
-        message.setField(quickfix.ClOrdID(self.genExecID()))
-        message.setField(quickfix.Symbol(request.symbol))
-        message.setField(quickfix.Side(side))
-        message.setField(quickfix.Price(float(request.price)))
-        if request.order_type.lower() == "market":
-            message.setField(quickfix.OrdType(quickfix.OrdType_MARKET))
+        header.setField(35,"D") #MsgType
+
+        message.setField(55,request.symbol) #Symbol
+        message.setField(54, side) #Side
+        message.setField(15,request.currency) #Currency
+        message.setField(44,request.price) #Price
+        message.setField(117, "")#request.quote_id) #QuoteID
+        message.setField(18, request.exec_inst) #ExecInst
+        message.setField(460, "4") #Product
+        message.setField(110, request.min_qty) #MinQty
+        message.setField(21, "3") #HandlInst
+        message.setField(38, request.quantity) #OrderQty
+
+        message.setField(quickfix.TransactTime()) # 60 TransactTime
+
+        if request.ord_type.lower() == "market":
+            message.setField(40, "1") #OrdType Market
         else:
-            message.setField(quickfix.OrdType(quickfix.OrdType_LIMIT))
-        message.setField(quickfix.HandlInst(quickfix.HandlInst_MANUAL_ORDER_BEST_EXECUTION))
-        message.setField(quickfix.TransactTime())
-        message.setField(quickfix.OrderQty(float(request.quantity)))
-        message.setField(quickfix.Text(f"{side} {request.symbol} {request.quantity}@{request.price}"))
+            message.setField(40, "2") #OrdType Limit
 
-        quickfix.Session.sendToTarget(message, self.sessionID)
-        time.sleep(2)
-        return 
+        message.setField(58, f"{side} {request.symbol} {request.quantity}@{request.price}") #Text
+
+        appResp = self.adapter.send_msg(message)
+        msg = self.generate_message(appResp)
+        return msg
+
+    def generate_message(self,message):
+        resp = FixResponse()
+        resp.msg = message
+        if message != "Time Out 2s":
+            for pair in message.split("|"):
+                if pair != "":
+                    tag,value = pair.split("=")
+                    setattr(resp, tag, value)
+        return resp
+
+class FixQuoteOperation(BusinessOperation):
+
+    def get_adapter_type():
+        """
+        Get the Application adapter needed for quickfix
+        """
+        return "Python.QuoteAdapter"
+
+
+    def on_init(self):
+        # We create a SessionSettings and get its settings dict
+        session_settings = quickfix.SessionSettings()
+        settings_dict = session_settings.get()
         
-    def replace_order(self,request:ReplaceOrderRequest):
+        # We get all the attr that are in self but not in the base BusinessOperation class
+        config_attr = set(dir(self)).difference(set(dir(BusinessOperation))).difference(set(['generate_message','new_quote']))
 
-        time.sleep(2)
+        # For every one of them we add them to the settings using the setString method ( replace it if exists, create it if not)
+        for attr in config_attr:
+            self.log_info(attr + " : " + str(getattr(self,attr)))
+            settings_dict.setString(attr,getattr(self, attr))
 
-        if request.side.lower() == "buy":
-            side = quickfix.Side_BUY
-        else:
-            side = quickfix.Side_SELL
-
-        message = quickfix43.OrderCancelReplaceRequest()
-        message.setField(quickfix.OrigClOrdID(request.orig_client_order_id))
-        message.setField(quickfix.ClOrdID(self.genExecID()))
-        message.setField(quickfix.Symbol(request.symbol))
-        message.setField(quickfix.Side(side))
-        message.setField(quickfix.Price(float(request.price)))
-        message.setField(quickfix.OrdType(quickfix.OrdType_LIMIT))
-        message.setField(quickfix.HandlInst(quickfix.HandlInst_MANUAL_ORDER_BEST_EXECUTION))
-        message.setField(quickfix.TransactTime())
-        message.setField(quickfix.OrderQty(float(request.quantity)))
-        message.setField(quickfix.Text(f"{request.side} {request.symbol} {request.quantity}@{request.price}"))
-
-        quickfix.Session.sendToTarget(message, self.sessionID)
-        time.sleep(2)
-
-
-    def delete_order(self,request:DeleteOrderRequest):
-        time.sleep(2)
-
-        if request.side.lower() == "buy":
-            side = quickfix.Side_BUY
-        else:
-            side = quickfix.Side_SELL
-      
-        message = quickfix43.OrderCancelRequest()
-        message.setField(quickfix.OrigClOrdID(request.orig_client_order_id))
-        message.setField(quickfix.ClOrdID(self.genExecID()))
-        message.setField(quickfix.Symbol(request.symbol))
-        message.setField(quickfix.OrdType(quickfix.OrdType_LIMIT))
-        message.setField(quickfix.Side(side))
-        message.setField(quickfix.TransactTime())
-        message.setField(quickfix.Text(f"Delete {request.orig_client_order_id}")) 
-
-        quickfix.Session.sendToTarget(message, self.sessionID)
-        time.sleep(2)
-
-
-    def genExecID(self):
-        self.execID += 1
-        return str(self.execID).zfill(5)
-
-    def onCreate(self, sessionID):
-        self.sessionID = sessionID
-        self.log_info("onCreate : Session (%s)" % sessionID.toString())
-        return
-
-    def onLogon(self, sessionID):
-        self.sessionID = sessionID
-        self.log_info("Successful Logon to session '%s'." % sessionID.toString())
-        return
-
-    def onLogout(self, sessionID):
-        self.log_info("Session (%s) logout !" % sessionID.toString())
-        return
         
-    def toAdmin(self, message, sessionID):        
-        msg = message.toString().replace(__SOH__, "|")
-        self.log_info("(Admin) S >> %s" % msg)
-        return
+        sessionID = quickfix.SessionID(self.BeginString,self.SenderCompID,self.TargetCompID)
+
+        # We set our session with the session IDs and the settings we want for it
+        session_settings.set(sessionID,settings_dict)
+
+        # Create our Application and apply our sessions_settings
+        storefactory = quickfix.FileStoreFactory(session_settings)
+        logfactory = quickfix.FileLogFactory(session_settings)
         
-    def fromAdmin(self, message, sessionID):
-        msg = message.toString().replace(__SOH__, "|")
-        self.log_info("(Admin) R << %s" % msg)
+        # Create the initiator inside the adapter
+        self.adapter.init_initiator(storefactory,session_settings,logfactory,sessionID,self.Username,self.Password,self.DeliverToCompID,self.SenderSubID,self)        
+            
+    def on_tear_down(self):
+        self.adapter.stop_initiator()
+
+    def on_message(self, request):
+        self.log_info("on_message")
         return
 
-    def toApp(self, message, sessionID):
-        msg = message.toString().replace(__SOH__, "|")
-        self.log_info("(App) S >> %s" % msg)
-        return
-        
-    def fromApp(self, message, sessionID):
-        msg = message.toString().replace(__SOH__, "|")
-        self.log_info("(App) R << %s" % msg)
-        #self.onMessage(message, sessionID)
-        return
+    def new_quote(self,request:QuoteRequest):
 
-    def onMessage(self, message, sessionID=None):
-        msg = message.toString().replace(__SOH__, "|")
-        self.log_info("onMessage >< %s" % msg)
+        message = quickfix.Message()
+        header = message.getHeader()
+        header.setField(35,"R") #MsgType
 
-if __name__ == '__main__':
-    bo = FixBusinessOperation()
-    bo.BeginString='FIX.4.3'
-    bo.SenderCompID='CLIENT'
-    bo.TargetCompID='SERVER'
-    bo.HeartBtInt='5'
-    bo.SocketConnectPort='3000'
-    bo.SocketConnectHost='acceptor'
-    bo.DataDictionary='/irisdev/app/src/fix/spec/FIX43.xml'
-    bo.FileStorePath='/irisdev/app/src/fix/Sessions/'
-    bo.ConnectionType='initiator'
-    bo.FileLogPath='./Logs/'
-    bo.StartTime='00:00:00'
-    bo.EndTime='00:00:00'
-    bo.ReconnectInterval='60'
-    bo.LogoutTimeout='30'
-    bo.LogonTimeout='30'
-    bo.ResetOnLogon='Y'
-    bo.ResetOnLogout='Y'
-    bo.ResetOnDisconnect='Y'
-    bo.SendRedundantResendRequests='Y'
-    bo.SocketNodelay='N'
-    bo.ValidateUserDefinedFields='N'
-    bo.ValidateFieldsOutOfOrder='N'
-    bo.on_init()
+        group = quickfix43.QuoteRequest().NoRelatedSym()
+        group.setField(40,"D") #OrdType
+        for symbol in request.symbols.split(";"):
+            group.setField(55,symbol) #Symbol
+            #group.setField(40,"D") #OrdType
+        message.addGroup(group)
 
-    nostop = True
-    while nostop:
-        #bo.artificial_heart_beat(HeartBeatRequest())
-        nb = input("0 stop, 1 to new order buy, 2 to delete order, ")
-        if nb == "1":
-            msg = NewOrderRequest()
-            msg.order_type = "limit"
-            msg.symbol = "MSFT"
-            msg.price = "100"
-            msg.quantity = "10000"
-            msg.side = "buy"
-            bo.new_order(msg)
-        elif nb == "2":
-            msg = DeleteOrderRequest()
-            msg.order_type = "limit"
-            msg.side = "buy"
-            msg.symbol = "MSFT"
-            msg.orig_client_order_id = "00001"
-            bo.delete_order(msg)
-        else:
-            nostop = not nostop
-    
+        #message.setField(40,"D") #OrdType
+        message.setField(167,"FOR") #SecurityType
+        message.setField(54,"1") #Side
+        message.setField(38,"10000") #OrderQty
+
+        appResp = self.adapter.send_msg(message)
+        msg = self.generate_message(appResp)
+        return msg
+
+
+    def generate_message(self,message):
+        resp = FixResponse()
+        resp.msg = message
+        if message != "Time Out 2s":
+            for pair in message.split("|"):
+                if pair != "":
+                    tag,value = pair.split("=")
+                    setattr(resp, tag, value)
+        return resp

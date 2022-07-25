@@ -1,4 +1,3 @@
-
 FROM intersystemsdc/iris-community:latest as build
 
 COPY requirements.txt .
@@ -17,6 +16,10 @@ COPY src src
 
 COPY iris.script /tmp/iris.script
 
+USER root
+RUN apt-get update
+USER ${ISC_PACKAGE_MGRUSER}
+
 RUN iris start IRIS \
 	&& iris session IRIS < /tmp/iris.script \
     && iris stop IRIS quietly
@@ -24,4 +27,3 @@ RUN iris start IRIS \
 ENV IRISUSERNAME "SuperUser"
 ENV IRISPASSWORD "SYS"
 ENV IRISNAMESPACE "IRISAPP"
-

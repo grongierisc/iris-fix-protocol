@@ -65,9 +65,9 @@ ConnectionType=initiator
 FileLogPath=./Logs/
 StartTime=00:00:00
 EndTime=00:00:00
-ReconnectInterval=1
+ReconnectInterval=10
 LogoutTimeout=5
-LogonTimeout=5
+LogonTimeout=30
 ResetOnLogon=Y
 ResetOnLogout=Y
 ResetOnDisconnect=Y
@@ -84,6 +84,26 @@ In Operation Class select `Python.FixBusinessOperation` and in the Operation Nam
 It can be the same as the default configuration seen earlier or any other valid configuration.<br>
 See this [website (in the 'Getting started' / 'Configuration' tab)](https://new.quickfixn.org/c/documentation/) for more information.
 
+### Send a quote
+**New Quote**
+Type of request : `Grongier.PEX.Message`<br>
+
+For the `classname` you must enter :
+```
+msg.QuoteRequest
+```
+
+ And for the `json`, here is an example of quote request :
+```
+{
+    "symbols":"MSFT",
+    "comm_type":"2",
+    "ord_type":"market"
+}
+```
+Now you can click on `Visual Trace` to see in details what happened and see the logs of the initiator.
+
+
 ### Send an order
 
 You must first start the demo, using the green `Start` button or `Stop` and `Start` it again to apply your config changes.
@@ -98,7 +118,7 @@ Type of request : `Grongier.PEX.Message`<br>
 
 For the `classname` you must enter :
 ```
-msg.NewOrderRequest
+msg.OrderRequest
 ```
 
  And for the `json`, here is an example of a simple buy order :
@@ -108,7 +128,11 @@ msg.NewOrderRequest
     "quantity":"10000",
     "price":"100",
     "side":"buy",
-    "order_type":"limit"
+    "ord_type":"limit",
+    "currency":"EUR/USD",
+    "exec_inst":"B",
+    "time_in_force":"1",
+    "min_qty":"8000"
 }
 ```
 Now you can click on `Visual Trace` to see in details what happened and see the logs of the initiator.
@@ -120,7 +144,7 @@ Type of request : `Grongier.PEX.Message`<br>
 
 For the `classname` you must enter :
 ```
-msg.NewOrderRequest
+msg.OrderRequest
 ```
 
 By using "side":"sell" we can send make a simple sell order :
@@ -130,7 +154,7 @@ By using "side":"sell" we can send make a simple sell order :
     "quantity":"10000",
     "price":"100",
     "side":"sell",
-    "order_type":"limit"
+    "ord_type":"limit"
 }
 ```
 Now you can click on `Visual Trace` to see in details what happened and see the logs of the initiator.

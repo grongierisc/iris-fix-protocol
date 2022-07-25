@@ -2,4 +2,5 @@
 
 from grongier.pex._utils import register_component
 
-register_component("bo","FixBusinessOperation","/irisdev/app/src/fix/",1,"Python.FixBusinessOperation")
+register_component("bo","FixOrderOperation","/irisdev/app/src/fix/",1,"Python.FixOrderOperation")
+register_component("adapter","OrderAdapter","/irisdev/app/src/fix/",1,"Python.OrderAdapter")

@@ -6,12 +6,13 @@ services:
       dockerfile: Dockerfile
     restart: always
     command: --check-caps false
-    ports: 
+    ports:
       - 1972
       - 52795:52773
       - 53773
     volumes:
       - ./:/irisdev/app
+
 
   acceptor:
     hostname: acceptor
@@ -28,3 +29,4 @@ services:
     tty: true
     env_file:
       - .env
+
