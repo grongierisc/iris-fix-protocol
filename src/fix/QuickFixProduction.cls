@@ -8,7 +8,7 @@ XData ProductionDefinition
   <ActorPoolSize>2</ActorPoolSize>
   <Item Name="Python.FixOrder" Category="" ClassName="Python.FixOrderOperation" PoolSize="1" Enabled="true" Foreground="false" Comment="" LogTraceEvents="false" Schedule="">
     <Setting Target="Host" Name="%settings">BeginString=FIX.4.3
-SenderCompID=CLIENT-ORDER
+SenderCompID=CLIENTORDER
 TargetCompID=SERVER
 HeartBtInt=30
 SocketConnectPort=3000
@@ -33,7 +33,7 @@ ValidateFieldsOutOfOrder=N</Setting>
   </Item>
   <Item Name="Python.FixQuote" Category="" ClassName="Python.FixQuoteOperation" PoolSize="1" Enabled="true" Foreground="false" Comment="" LogTraceEvents="false" Schedule="">
     <Setting Target="Host" Name="%settings">BeginString=FIX.4.3
-SenderCompID=CLIENT-QUOTE
+SenderCompID=CLIENTQUOTE
 TargetCompID=SERVER
 HeartBtInt=30
 SocketConnectPort=3000

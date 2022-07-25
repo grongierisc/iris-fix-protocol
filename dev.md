@@ -1,7 +1,9 @@
+docker kill $(docker ps -q)
+docker rm $(docker ps -a -q)
 docker-compose up
 
-docker-compose exec -u root iris bash
-    service stunnel4 start
+docker-compose up -d --build acceptor
+
     
 
 management portal :
@@ -33,19 +35,18 @@ management portal :
 
     For the `classname` you must enter :
     ```
-    msg.OrderRequest
+    msg.Request
     ```
 
     And for the `json`, here is an example of a simple buy order :
     ```
    {
-        "symbol": "EUR/USD",
-        "quantity": "10000",
-        "price": "100",
-        "side": "buy",
-        "ord_type": "limit",
-        "currency": "EUR",
-        "exec_inst": "B",
-        "min_qty": "8000"
+        "H35":"D",
+        "55": "EUR/USD",
+        "44": "100",
+        "38": "10000",
+        "54": "1",
+        "40": "1",
+        "21": "1"
     }
     ```

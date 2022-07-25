@@ -1,4 +1,5 @@
 """Client FIX"""
+from logging import exception
 import sys
 import argparse
 import quickfix
@@ -18,8 +19,10 @@ def main(config_file):
         acceptor.stop()
         
 
-    except (quickfix.ConfigError, quickfix.RuntimeError) as e:
+    except Exception as e:
         print(e)
+        with open("/misc/log.txt","a") as logfile:
+            logfile.write(str(e))
         acceptor.stop()
         sys.exit()
 

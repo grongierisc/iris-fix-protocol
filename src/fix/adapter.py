@@ -5,6 +5,7 @@ import quickfix
 import quickfix43
 
 import time
+from datetime import datetime
 
 __SOH__ = chr(1)
 
@@ -18,16 +19,16 @@ class OrderAdapter(quickfix.Application,OutboundAdapter):
     def on_keepalive(self):
         pass
 
-    def init_initiator(self,storefactory,session_settings,logfactory,sessionID,username,password,delivertocompID,sendersubID):
+    def init_initiator(self,storefactory,session_settings,logfactory,sessionID,host):
         try:
             self.lastMsg = None
             self.execID = 0
             self.quoteID = 0
             self.sessionID = sessionID
-            self.username = username
-            self.password = password
-            self.delivertocompID = delivertocompID
-            self.sendersubID = sendersubID
+            self.username = host.Username if hasattr(host,"Username") else ""
+            self.password = host.Password if hasattr(host, "Password") else ""
+            self.delivertocompID = host.DelivertocompID if hasattr(host, "DelivertocompID") else ""
+            self.sendersubID = host.SendersubID if hasattr(host, "SendersubID") else ""
             self.initiator = quickfix.SocketInitiator(self, storefactory, session_settings, logfactory)
             self.initiator.start()
         except (quickfix.ConfigError, quickfix.RuntimeError) as e:
@@ -42,22 +43,16 @@ class OrderAdapter(quickfix.Application,OutboundAdapter):
         self.lastMsg = "Time Out 2s"
 
         header = message.getHeader()
-
-        header.setField(128, self.delivertocompID) #DeliverToCompID
-        header.setField(50, self.sendersubID) #SenderSubID
-
         message.setField(11, self.genExecID()) #ClOrdID
+        message.setField(60, str(datetime.now().strftime("%Y%m%d-%H:%M:%S"))) #TransactTime
 
-
-        quickfix.Session.sendToTarget(message,self.sessionID)
-        
+        quickfix.Session.sendToTarget(message,self.sessionID)        
 
         start = time.perf_counter()
         # Once a message was sent to the server, we wait 2 seconds for a response or we time out
         while time.perf_counter() - start < 2 and self.lastMsg == "Time Out 2s" :
             pass
         return self.lastMsg
-
 
     def genExecID(self):
         self.execID += 1
@@ -79,7 +74,7 @@ class OrderAdapter(quickfix.Application,OutboundAdapter):
         
     def toAdmin(self, message, sessionID):
         # If logon message, add to the header the connection info
-        if message.getHeader().getField(35) == "A":
+        if message.getHeader().getField(35) == "A" and self.username != "" and self.password != "":
             message.getHeader().setField(553, self.username)
             message.getHeader().setField(554, self.password)
         msg = message.toString().replace(__SOH__, "|")
@@ -116,20 +111,19 @@ class QuoteAdapter(quickfix.Application,OutboundAdapter):
     def on_keepalive(self):
         pass
 
-    def init_initiator(self,storefactory,session_settings,logfactory,sessionID,username,password,delivertocompID,sendersubID,obj):
+    def init_initiator(self,storefactory,session_settings,logfactory,sessionID,host):
         try:
-            self.service = obj
-            self.symbols = self.service.symbols
-            self.depth = self.service.depth
+            self.host = host
+            self.symbols = self.host.symbols
+            self.depth = self.host.depth
             self.execID = 0
             self.quoteID = 0
             self.sessionID = sessionID
-            self.username = username
-            self.password = password
-            self.delivertocompID = delivertocompID
-            self.sendersubID = sendersubID
+            self.username = host.Username if hasattr(host,"Username") else ""
+            self.password = host.Password if hasattr(host, "Password") else ""
+            self.delivertocompID = host.DelivertocompID if hasattr(host, "DelivertocompID") else ""
+            self.sendersubID = host.SendersubID if hasattr(host, "SendersubID") else ""
             self.marketList = []
-            self.service = obj
             self.initiator = quickfix.SocketInitiator(self, storefactory, session_settings, logfactory)
             self.initiator.start()
 
@@ -172,7 +166,7 @@ class QuoteAdapter(quickfix.Application,OutboundAdapter):
         
     def toAdmin(self, message, sessionID):
         # If logon message, add to the header the connection info
-        if message.getHeader().getField(35) == "A":
+        if message.getHeader().getField(35) == "A" and self.username != "" and self.password != "":
             message.getHeader().setField(553, self.username)
             message.getHeader().setField(554, self.password)
         msg = message.toString().replace(__SOH__, "|")
@@ -200,20 +194,17 @@ class QuoteAdapter(quickfix.Application,OutboundAdapter):
         msg = message.toString().replace(__SOH__, "|")
         self.log_info("(AppQuote) R << %s" % msg)
         # If we receive a message from app, we have to process it
-        self.onMessage(message)
+        try:
+            self.onMessage(message)
+        except Exception as e:
+            self.log_info(str(e))
         return
 
 
     def send_msg(self,message):
         self.lastMsg = "Time Out 5s"
 
-        header = message.getHeader()
-
-        header.setField(128, self.delivertocompID) #DeliverToCompID
-        header.setField(50, self.sendersubID) #SenderSubID
-
         message.setField(131, self.genQuoteID()) #QuoteReqID
-
 
         quickfix.Session.sendToTarget(message,self.sessionID)
         
@@ -228,7 +219,6 @@ class QuoteAdapter(quickfix.Application,OutboundAdapter):
     def onMessage(self, message):
         msgtype = quickfix.MsgType()
         message.getHeader().getField(msgtype)
-
 
         # if the message received for the app is a market response
         if msgtype.getValue() == "W":
@@ -265,7 +255,7 @@ class QuoteAdapter(quickfix.Application,OutboundAdapter):
             book = Book(instrument, _bids, _asks, _trades)
             try:
                 # Send a "good looking" message to the FixBusinessProcess to show it in the log
-                self.service.send_request_async("Python.FixBusinessProcess",self.generate_message(message.toString().replace(__SOH__, "|"),book))
+                self.host.send_request_async("Python.FixBusinessProcess",self.generate_message(message.toString().replace(__SOH__, "|"),book))
             except Exception as e:
                 self.log_info(str(e))
         else:
@@ -298,11 +288,11 @@ class QuoteAdapter(quickfix.Application,OutboundAdapter):
 
         message.setField(265, "0") #MDUpdateType
 
-        header.setField(128, self.delivertocompID) #DeliverToCompID
+        #header.setField(128, self.delivertocompID) #DeliverToCompID
         
         message.setField(167, "FOR") #SecurityType
 
-        header.setField(50, self.sendersubID) #SenderSubID
+        #header.setField(50, self.sendersubID) #SenderSubID
 
         group = quickfix43.MarketDataRequest().NoRelatedSym()
 
@@ -343,11 +333,11 @@ class QuoteAdapter(quickfix.Application,OutboundAdapter):
         message.setField(265, "0") #MDUpdateType
 
 
-        header.setField(128, self.delivertocompID) #DeliverToCompID
+        #header.setField(128, self.delivertocompID) #DeliverToCompID
         
         message.setField(167, "FOR") #SecurityType
 
-        header.setField(50, self.sendersubID) #SenderSubID
+        #header.setField(50, self.sendersubID) #SenderSubID
 
         group = quickfix43.MarketDataRequest().NoRelatedSym()
 

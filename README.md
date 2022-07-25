@@ -118,7 +118,7 @@ Type of request : `Grongier.PEX.Message`<br>
 
 For the `classname` you must enter :
 ```
-msg.OrderRequest
+msg.Request
 ```
 
  And for the `json`, here is an example of a simple buy order :
@@ -144,7 +144,7 @@ Type of request : `Grongier.PEX.Message`<br>
 
 For the `classname` you must enter :
 ```
-msg.OrderRequest
+msg.Request
 ```
 
 By using "side":"sell" we can send make a simple sell order :
@@ -170,7 +170,7 @@ Type of request : `Grongier.PEX.Message`<br>
 
 For the `classname` you must enter :
 ```
-msg.ReplaceOrderRequest
+msg.ReplaceRequest
 ```
 ```
 {
@@ -191,7 +191,7 @@ Type of request : `Grongier.PEX.Message`<br>
 
 For the `classname` you must enter :
 ```
-msg.DeleteOrderRequest
+msg.DeleteRequest
 ```
 ```
 {
