@@ -4,12 +4,21 @@ from msg import Request,MarketResponse
 class FixBusinessProcess(BusinessProcess):
 
     def on_request(self,request):
-        if isinstance(request,Request):
-            try:
+        return request
+
+    def on_order_request(self,request:Request):
+        """
+        Logic of the project.
+        When you get a request, depending on the msg_type ( and/or other field/tags) you process it differently
+        """
+        try:
+            msg_type = getattr(request.header_field,"35")
+
+            if  msg_type == "D":
                 quote_req = Request()
-                setattr(quote_req,"55",getattr(request,"55"))
-                setattr(quote_req,"13","2")
-                setattr(quote_req,"40",getattr(request,"40"))
+                setattr(quote_req.message_field,"55",getattr(request,"55"))
+                setattr(quote_req.message_field,"13","2")
+                setattr(quote_req.message_field,"40",getattr(request,"40"))
             
                 quote_resp = self.send_request_sync("Python.FixQuote",quote_req)
 
@@ -19,14 +28,15 @@ class FixBusinessProcess(BusinessProcess):
                     return order_resp
                 else:
                     return quote_resp
-            except Exception as e:
-                self.log_info(str(e))
-        
-        elif isinstance(request,MarketResponse):
-            self.log_info(str(request))
-            pass
 
-        else:
-            return request
+            elif msg_type == "R":
+                quote_resp = self.send_request_sync("Python.FixQuote",request)
+                return quote_resp
+
+        except Exception as e:
+            self.log_info(str(e))
+
+    def on_market_response(self,request:MarketResponse):
+        self.log_info(str(request))
 
         

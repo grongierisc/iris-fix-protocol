@@ -40,7 +40,7 @@ class OrderAdapter(quickfix.Application,OutboundAdapter):
         self.initator.stop()
 
     def send_msg(self,message):
-        self.lastMsg = "Time Out 2s"
+        self.lastMsg = "Time Out 5s"
 
         header = message.getHeader()
         message.setField(11, self.genExecID()) #ClOrdID
@@ -49,8 +49,8 @@ class OrderAdapter(quickfix.Application,OutboundAdapter):
         quickfix.Session.sendToTarget(message,self.sessionID)        
 
         start = time.perf_counter()
-        # Once a message was sent to the server, we wait 2 seconds for a response or we time out
-        while time.perf_counter() - start < 2 and self.lastMsg == "Time Out 2s" :
+        # Once a message was sent to the server, we wait 5 seconds for a response or we time out
+        while time.perf_counter() - start < 5 and self.lastMsg == "Time Out 5s" :
             pass
         return self.lastMsg
 
@@ -90,7 +90,7 @@ class OrderAdapter(quickfix.Application,OutboundAdapter):
 
         # If we receive from admin an error or a reject, we send it as a response
         if msgtype.getValue() == "3" or msgtype.getValue() == "2":
-            self.lastMsg = msg
+            self.lastMsg = message
         return
 
     def toApp(self, message, sessionID):
@@ -102,7 +102,7 @@ class OrderAdapter(quickfix.Application,OutboundAdapter):
         msg = message.toString().replace(__SOH__, "|")
         self.log_info("(AppOrder) R << %s" % msg)
         # if we receive a message from app we send it as a response
-        self.lastMsg = msg
+        self.lastMsg = message
         return
 
 
@@ -182,7 +182,7 @@ class QuoteAdapter(quickfix.Application,OutboundAdapter):
 
         # If we receive from admin an error or a reject, we send it as a response
         if msgtype.getValue() == "3" or msgtype.getValue() == "2":
-            self.lastMsg = msg
+            self.lastMsg = message
         return
 
     def toApp(self, message, sessionID):
@@ -200,7 +200,6 @@ class QuoteAdapter(quickfix.Application,OutboundAdapter):
             self.log_info(str(e))
         return
 
-
     def send_msg(self,message):
         self.lastMsg = "Time Out 5s"
 
@@ -210,7 +209,7 @@ class QuoteAdapter(quickfix.Application,OutboundAdapter):
         
 
         start = time.perf_counter()
-        # Once a message was sent to the server, we wait 2 seconds for a response or we time out
+        # Once a message was sent to the server, we wait 5 seconds for a response or we time out
         while time.perf_counter() - start < 5 and self.lastMsg == "Time Out 5s" :
             pass
         return self.lastMsg
@@ -255,12 +254,11 @@ class QuoteAdapter(quickfix.Application,OutboundAdapter):
             book = Book(instrument, _bids, _asks, _trades)
             try:
                 # Send a "good looking" message to the FixBusinessProcess to show it in the log
-                self.host.send_request_async("Python.FixBusinessProcess",self.generate_message(message.toString().replace(__SOH__, "|"),book))
+                self.host.send_request_async("Python.FixBusinessProcess",self.host.generate_message(message,book))
             except Exception as e:
                 self.log_info(str(e))
         else:
-            msg = message.toString().replace(__SOH__, "|")
-            self.lastMsg = msg
+            self.lastMsg = message
                 
     def subscription(self):
         message = quickfix43.MarketDataRequest()
@@ -288,11 +286,12 @@ class QuoteAdapter(quickfix.Application,OutboundAdapter):
 
         message.setField(265, "0") #MDUpdateType
 
-        #header.setField(128, self.delivertocompID) #DeliverToCompID
-        
-        message.setField(167, "FOR") #SecurityType
+        if self.delivertocompID != "":
+            header.setField(128, self.delivertocompID) #DeliverToCompID
+        if self.sendersubID != "":
+            header.setField(50, self.sendersubID) #SenderSubID
 
-        #header.setField(50, self.sendersubID) #SenderSubID
+        message.setField(167, "FOR") #SecurityType
 
         group = quickfix43.MarketDataRequest().NoRelatedSym()
 
@@ -310,53 +309,43 @@ class QuoteAdapter(quickfix.Application,OutboundAdapter):
         message = quickfix43.MarketDataRequest()
         header = message.getHeader()
 
-        header.setField(262, self.genExecID()) #MDReqID
+        header.setField(262, str(self.genExecID())) #MDReqID
 
-        # unsubscription snapshot + updates
+        # Unsubscription snapshot + updates
         message.setField(
             quickfix.SubscriptionRequestType(
                 quickfix.SubscriptionRequestType_DISABLE_PREVIOUS_SNAPSHOT_PLUS_UPDATE_REQUEST
             )
         )
-
+ 
         message.setField(264, self.depth) #MarketDepth
 
         group = quickfix43.MarketDataRequest().NoMDEntryTypes()
 
         # Add md_types as settings
         #md_types = [quickfix.MDEntryType_BID, quickfix.MDEntryType_OFFER, quickfix.MDEntryType_TRADE]
-        md_types = [quickfix.MDEntryType_BID, quickfix.MDEntryType_OFFER]
+        md_types = ["0", "1"]
         for md_type in md_types:
-            group.setField(269, md_type) #MDEntryType
+            group.setField(269, md_type) #269 MDEntryType
             message.addGroup(group)
 
         message.setField(265, "0") #MDUpdateType
 
+        if self.delivertocompID != "":
+            header.setField(128, self.delivertocompID) #DeliverToCompID
+        if self.sendersubID != "":
+            header.setField(50, self.sendersubID) #SenderSubID
 
-        #header.setField(128, self.delivertocompID) #DeliverToCompID
-        
         message.setField(167, "FOR") #SecurityType
-
-        #header.setField(50, self.sendersubID) #SenderSubID
 
         group = quickfix43.MarketDataRequest().NoRelatedSym()
 
         for symbol in self.symbols.split(";"):
             group.setField(55, symbol) #Symbol
-            group.setField(460, 4) #Product
+            group.setField(460, "4") #Product
             message.addGroup(group)
 
         msg = message.toString().replace(__SOH__, "|")
-        self.log_info(f"Market unsubscription : {msg}")
+        self.log_info(f"Market subscription : {msg}")
            
         quickfix.Session.sendToTarget(message, self.sessionID)
-
-    def generate_message(self,message,book):
-        resp = MarketResponse()
-        resp.msg = message
-        resp.book = book
-        for pair in message.split("|"):
-            if pair != "":
-                tag,value = pair.split("=")
-                setattr(resp, tag, value)
-        return resp

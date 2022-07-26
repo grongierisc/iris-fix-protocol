@@ -40,13 +40,19 @@ management portal :
 
     And for the `json`, here is an example of a simple buy order :
     ```
-   {
-        "H35":"D",
-        "55": "EUR/USD",
-        "44": "100",
-        "38": "10000",
-        "54": "1",
-        "40": "1",
-        "21": "1"
+    {
+    "header_field":
+        {
+            "35":"D"
+        },
+    "message_field":
+        {
+            "55": "EUR/USD",
+            "44": "100",
+            "38": "10000",
+            "54": "1",
+            "40": "1",
+            "21": "1"
+        }
     }
     ```

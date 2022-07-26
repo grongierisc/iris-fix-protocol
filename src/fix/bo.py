@@ -3,7 +3,7 @@ from grongier.pex import BusinessOperation
 import quickfix
 import quickfix43
 
-from msg import Request,FixResponse,QuoteRequest
+from msg import Request,Response
 
 __SOH__ = chr(1)
 
@@ -53,11 +53,12 @@ class FixOrderOperation(BusinessOperation):
         message = quickfix.Message()
         header = message.getHeader()
         try:
-            for tag,value in request.__dict__.items():
-                if tag[0] == "H":
-                    header.setField(int(tag[1:]),value)
-                else:
+            if request.message_field:
+                for tag,value in request.message_field.__dict__.items():
                     message.setField(int(tag),value)
+            if request.header_field:
+                for tag,value in request.header_field.__dict__.items():
+                    header.setField(int(tag),value)
 
             appResp = self.adapter.send_msg(message)
             msg = self.generate_message(appResp)
@@ -66,10 +67,10 @@ class FixOrderOperation(BusinessOperation):
             self.log_info(str(e))
 
     def generate_message(self,message):
-        resp = FixResponse()
-        resp.msg = message
-        if message != "Time Out 2s":
-            for pair in message.split("|"):
+        resp = Response()
+        resp.msg = message.toString().replace(__SOH__, "|")
+        if message != "Time Out 5s":
+            for pair in resp.msg.split("|"):
                 if pair != "":
                     tag,value = pair.split("=")
                     setattr(resp, tag, value)
@@ -121,11 +122,12 @@ class FixQuoteOperation(BusinessOperation):
         message = quickfix.Message()
         header = message.getHeader()
         try:
-            for tag,value in request.__dict__.items():
-                if tag[0] == "H":
-                    header.setField(int(tag[1:]),value)
-                else:
+            if request.message_field:
+                for tag,value in request.message_field.__dict__.items():
                     message.setField(int(tag),value)
+            if request.header_field:
+                for tag,value in request.header_field.__dict__.items():
+                    header.setField(int(tag),value)
             
             # Uncomment if acceptor can manage quote request
             #appResp = self.adapter.send_msg(message)
@@ -133,7 +135,7 @@ class FixQuoteOperation(BusinessOperation):
             #return msg
 
             # To delete if acceptor can manage quote request
-            temp = FixResponse()
+            temp = Response()
             temp.msg = "Temp"
             setattr(temp,"117","1")
             return temp
@@ -142,11 +144,13 @@ class FixQuoteOperation(BusinessOperation):
             self.log_info(str(e))
 
 
-    def generate_message(self,message):
-        resp = FixResponse()
-        resp.msg = message
-        if message != "Time Out 2s":
-            for pair in message.split("|"):
+    def generate_message(self,message,book=None):
+        resp = Response()
+        if book != None:
+            resp.book = book
+        resp.msg = message.toString().replace(__SOH__, "|")
+        if resp.msg != "Time Out 5s":
+            for pair in resp.msg.split("|"):
                 if pair != "":
                     tag,value = pair.split("=")
                     setattr(resp, tag, value)

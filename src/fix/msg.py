@@ -1,16 +1,15 @@
 from dataclasses import dataclass
 from grongier.pex import Message
 
+from obj import MessageField,HeaderField
+
 @dataclass
 class Request(Message):
-    pass
+    message_field:MessageField = None
+    header_field:HeaderField = None
 
 @dataclass
-class QuoteRequest(Message):
-    pass
-
-@dataclass
-class FixResponse(Message):
+class Response(Message):
     pass
 
 @dataclass
