@@ -1,5 +1,5 @@
 <fix major='4' type='FIX' servicepack='0' minor='3'>
- <header>
+ <header> 
   <field name='BeginString' required='Y' />
   <field name='BodyLength' required='Y' />
   <field name='MsgType' required='Y' />

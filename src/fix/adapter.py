@@ -169,11 +169,6 @@ class QuoteAdapter(quickfix.Application,OutboundAdapter):
 
     def onLogout(self, sessionID):
         self.log_info("FixQuote Session (%s) logout !" % sessionID.toString())
-        try:
-            if self.host.subscribe == "True":
-                self.unsubscription()
-        except Exception as e:
-            self.log_info(str(e))
         return
         
     def toAdmin(self, message, sessionID):
@@ -219,7 +214,6 @@ class QuoteAdapter(quickfix.Application,OutboundAdapter):
 
         quickfix.Session.sendToTarget(message,self.sessionID)
         
-
         start = time.perf_counter()
         # Once a message was sent to the server, we wait 5 seconds for a response or we time out
         while time.perf_counter() - start < 5 and self.lastMsg == "Time Out 5s" :

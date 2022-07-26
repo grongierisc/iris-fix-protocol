@@ -91,7 +91,17 @@ class Application(fix.Application):
         return responses
 
     def quote_request(self,message,sessionID):
-        pass
+        quote = fix.Message()
+        header = quote.getHeader()
+        header.setField(35,"S")
+        quote.setField(117,"1")
+        quote.setField(146,"1")
+        group = fix43.QuoteRequest().NoRelatedSym()
+        group.setField(40,"1")
+        group.setField(55,"EUR/USD")
+        quote.addGroup(group)
+
+        return [(sessionID,quote)]
 
 
     def market_data_request(self, message, sessionID):

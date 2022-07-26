@@ -5,6 +5,8 @@ import quickfix43
 
 from msg import Request,Response
 
+import xml.etree.ElementTree as ET
+
 __SOH__ = chr(1)
 
 class FixOrderOperation(BusinessOperation):
@@ -38,9 +40,14 @@ class FixOrderOperation(BusinessOperation):
         # Create our Application and apply our sessions_settings
         storefactory = quickfix.FileStoreFactory(session_settings)
         logfactory = quickfix.FileLogFactory(session_settings)
+        if self.DataDictionary:
+            self.tree = ET.parse(self.DataDictionary)
+        else:
+            self.tree = None
         
         # Create the initiator inside the adapter
         self.adapter.init_initiator(storefactory,session_settings,logfactory,sessionID,self)        
+
             
     def on_tear_down(self):
         self.adapter.stop_initiator()
@@ -53,12 +60,34 @@ class FixOrderOperation(BusinessOperation):
         message = quickfix.Message()
         header = message.getHeader()
         try:
-            if request.message_field:
-                for tag,value in request.message_field.__dict__.items():
-                    message.setField(int(tag),value)
             if request.header_field:
                 for tag,value in request.header_field.__dict__.items():
                     header.setField(int(tag),value)
+                    if tag == "35":
+                        msgtype = value
+
+            if request.message_field:
+                for tag,value in request.message_field.__dict__.items():
+                    message.setField(int(tag),value)
+                    
+            if request.group_field:
+                if msgtype != None:
+                    root = self.tree.getroot()
+                    msg_name = root.find(f"messages/message[@msgtype='{msgtype}']").get('name')
+                    for group_tag, list_group_tag in request.group_field.__dict__.items():
+                        group_name = root.find(f"fields/field[@number='{group_tag}']").get('name')
+
+                        group = getattr(getattr(quickfix43,msg_name)(),group_name)()
+
+                        tag_list = list(list_group_tag.keys())
+                        values_list = list(map(lambda x: x.split(";"),list_group_tag.values()))
+
+                        size_values = len(values_list[0])
+                        size_tag = len(tag_list)
+                        for i in range(size_values):
+                            for j in range(size_tag):
+                                    group.setField(int(tag_list[j]),values_list[j][i])                                
+                            message.addGroup(group)
 
             appResp = self.adapter.send_msg(message)
             msg = self.generate_message(appResp)
@@ -68,7 +97,7 @@ class FixOrderOperation(BusinessOperation):
 
     def generate_message(self,message):
         resp = Response()
-        resp.msg = message.toString().replace(__SOH__, "|")
+        resp.msg = message if type(message) == str else message.toString().replace(__SOH__, "|")
         if message != "Time Out 5s":
             for pair in resp.msg.split("|"):
                 if pair != "":
@@ -107,7 +136,12 @@ class FixQuoteOperation(BusinessOperation):
         # Create our Application and apply our sessions_settings
         storefactory = quickfix.FileStoreFactory(session_settings)
         logfactory = quickfix.FileLogFactory(session_settings)
-        
+
+        if self.DataDictionary:
+            self.tree = ET.parse(self.DataDictionary)
+        else:
+            self.tree = None
+
         # Create the initiator inside the adapter
         self.adapter.init_initiator(storefactory,session_settings,logfactory,sessionID,self)        
             
@@ -121,18 +155,41 @@ class FixQuoteOperation(BusinessOperation):
     def new_request(self,request:Request):
         message = quickfix.Message()
         header = message.getHeader()
+        msgtype = None
         try:
-            if request.message_field:
-                for tag,value in request.message_field.__dict__.items():
-                    message.setField(int(tag),value)
             if request.header_field:
                 for tag,value in request.header_field.__dict__.items():
                     header.setField(int(tag),value)
-            
-            # Uncomment if acceptor can manage quote request
-            #appResp = self.adapter.send_msg(message)
-            #msg = self.generate_message(appResp)
-            #return msg
+                    if tag == "35":
+                        msgtype = value
+
+            if request.message_field:
+                for tag,value in request.message_field.__dict__.items():
+                    message.setField(int(tag),value)
+                    
+            if request.group_field:
+                if msgtype != None:
+                    root = self.tree.getroot()
+                    msg_name = root.find(f"messages/message[@msgtype='{msgtype}']").get('name')
+                    for group_tag, list_group_tag in request.group_field.__dict__.items():
+                        group_name = root.find(f"fields/field[@number='{group_tag}']").get('name')
+
+                        #group = quickfix43.QuoteRequest().NoRelatedSym()
+                        group = getattr(getattr(quickfix43,msg_name)(),group_name)()
+
+                        tag_list = list(list_group_tag.keys())
+                        values_list = list(map(lambda x: x.split(";"),list_group_tag.values()))
+
+                        size_values = len(values_list[0])
+                        size_tag = len(tag_list)
+                        for i in range(size_values):
+                            for j in range(size_tag):
+                                    group.setField(int(tag_list[j]),values_list[j][i])                                
+                            message.addGroup(group)
+
+            # appResp = self.adapter.send_msg(message)
+            # msg = self.generate_message(appResp)
+            # return msg
 
             # To delete if acceptor can manage quote request
             temp = Response()
@@ -150,7 +207,7 @@ class FixQuoteOperation(BusinessOperation):
         resp = Response()
         if book != None:
             resp.book = book
-        resp.msg = message.toString().replace(__SOH__, "|")
+        resp.msg = message if isinstance(message, str) else message.toString().replace(__SOH__, "|")
         if resp.msg != "Time Out 5s":
             for pair in resp.msg.split("|"):
                 if pair != "":

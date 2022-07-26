@@ -23,11 +23,20 @@ management portal :
 
     And for the `json`, here is an example of quote request :
     ```
-    {
-        "symbols":"USD/JPY",
-        "comm_type":"2",
-        "currency":"USD"
-    }
+        {
+        "header_field":
+            {
+                "35":"R"
+            },
+        "group_field":
+            {
+                "146":
+                {
+                    "40":"1;2",
+                    "55":"EUR/USD;USD/CZK"
+                }
+            }
+        }
     ```
 
     **ORDER REQUEST **

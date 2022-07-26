@@ -7,3 +7,7 @@ class MessageField:
 @dataclass
 class HeaderField:
     pass
+
+@dataclass
+class GroupField:
+    pass
