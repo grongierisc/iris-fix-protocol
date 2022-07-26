@@ -108,14 +108,18 @@ class OrderAdapter(quickfix.Application,OutboundAdapter):
 
 class QuoteAdapter(quickfix.Application,OutboundAdapter):
 
+    def on_init(self):
+        adapter_attr = {}
+        for attr in set(dir(self)).difference(set(dir(OutboundAdapter))).difference(set(['OnMessage','subscription','unsubscription'])):
+            adapter_attr[attr] = getattr(self,attr)
+        self.business_host_python.adapter_attr = adapter_attr
+
     def on_keepalive(self):
         pass
 
     def init_initiator(self,storefactory,session_settings,logfactory,sessionID,host):
         try:
             self.host = host
-            self.symbols = self.host.symbols
-            self.depth = self.host.depth
             self.execID = 0
             self.quoteID = 0
             self.sessionID = sessionID
@@ -134,6 +138,10 @@ class QuoteAdapter(quickfix.Application,OutboundAdapter):
             raise e
 
     def stop_initiator(self):
+        try:
+            self.unsubscription()
+        except Exception as e:
+            self.log_info(str(e))
         self.unsubscription()
         self.initator.stop()
 
@@ -155,13 +163,17 @@ class QuoteAdapter(quickfix.Application,OutboundAdapter):
         self.log_info("FixQuote Successful Logon to session '%s'." % sessionID.toString())
         try:
             self.subscription()
-            pass
         except Exception as e:
             self.log_info(str(e))
         return
 
     def onLogout(self, sessionID):
         self.log_info("FixQuote Session (%s) logout !" % sessionID.toString())
+        try:
+            if self.host.subscribe == "True":
+                self.unsubscription()
+        except Exception as e:
+            self.log_info(str(e))
         return
         
     def toAdmin(self, message, sessionID):
@@ -261,51 +273,53 @@ class QuoteAdapter(quickfix.Application,OutboundAdapter):
             self.lastMsg = message
                 
     def subscription(self):
-        message = quickfix43.MarketDataRequest()
-        header = message.getHeader()
+        adapter_attr = self.host.get_info()
+        if adapter_attr["subscribe"] == "True":
 
-        header.setField(262, str(self.genExecID())) #MDReqID
+            message = quickfix43.MarketDataRequest()
+            header = message.getHeader()
 
-        # Subscription snapshot + updates
-        message.setField(
-            quickfix.SubscriptionRequestType(
-                quickfix.SubscriptionRequestType_SNAPSHOT_PLUS_UPDATES
+            header.setField(262, str(self.genExecID())) #MDReqID
+
+            # Subscription snapshot + updates
+            message.setField(
+                quickfix.SubscriptionRequestType(
+                    quickfix.SubscriptionRequestType_SNAPSHOT_PLUS_UPDATES
+                )
             )
-        )
- 
-        message.setField(264, self.depth) #MarketDepth
+    
+            message.setField(264, adapter_attr["MarketDepth"]) #MarketDepth
 
-        group = quickfix43.MarketDataRequest().NoMDEntryTypes()
+            group = quickfix43.MarketDataRequest().NoMDEntryTypes()
 
-        # Add md_types as settings
-        #md_types = [quickfix.MDEntryType_BID, quickfix.MDEntryType_OFFER, quickfix.MDEntryType_TRADE]
-        md_types = ["0", "1"]
-        for md_type in md_types:
-            group.setField(269, md_type) #269 MDEntryType
-            message.addGroup(group)
+            for md_type in adapter_attr["md_types"].split(";"):
+                group.setField(269, md_type) #269 MDEntryType
+                message.addGroup(group)
 
-        message.setField(265, "0") #MDUpdateType
+            message.setField(265, adapter_attr["MDUpdateType"]) #MDUpdateType
 
-        if self.delivertocompID != "":
-            header.setField(128, self.delivertocompID) #DeliverToCompID
-        if self.sendersubID != "":
-            header.setField(50, self.sendersubID) #SenderSubID
+            if self.delivertocompID != "":
+                header.setField(128, self.delivertocompID) #DeliverToCompID
+            if self.sendersubID != "":
+                header.setField(50, self.sendersubID) #SenderSubID
 
-        message.setField(167, "FOR") #SecurityType
+            message.setField(167, adapter_attr["SecurityType"]) #SecurityType
 
-        group = quickfix43.MarketDataRequest().NoRelatedSym()
+            group = quickfix43.MarketDataRequest().NoRelatedSym()
 
-        for symbol in self.symbols.split(";"):
-            group.setField(55, symbol) #Symbol
-            group.setField(460, "4") #Product
-            message.addGroup(group)
 
-        msg = message.toString().replace(__SOH__, "|")
-        self.log_info(f"Market subscription : {msg}")
-           
-        quickfix.Session.sendToTarget(message, self.sessionID)
+            for symbol,product in zip(adapter_attr["symbols"].split(";"),adapter_attr["products"].split(";")):
+                group.setField(55, symbol) #Symbol
+                group.setField(460, product) #Product
+                message.addGroup(group)
+
+            msg = message.toString().replace(__SOH__, "|")
+            self.log_info(f"Market subscription : {msg}")
+            
+            quickfix.Session.sendToTarget(message, self.sessionID)
 
     def unsubscription(self):
+        adapter_attr = self.host.get_info()
         message = quickfix43.MarketDataRequest()
         header = message.getHeader()
 
@@ -318,34 +332,33 @@ class QuoteAdapter(quickfix.Application,OutboundAdapter):
             )
         )
  
-        message.setField(264, self.depth) #MarketDepth
+        message.setField(264, adapter_attr["MarketDepth"]) #MarketDepth
 
         group = quickfix43.MarketDataRequest().NoMDEntryTypes()
 
-        # Add md_types as settings
-        #md_types = [quickfix.MDEntryType_BID, quickfix.MDEntryType_OFFER, quickfix.MDEntryType_TRADE]
-        md_types = ["0", "1"]
-        for md_type in md_types:
+        for md_type in adapter_attr["md_types"].split(";"):
             group.setField(269, md_type) #269 MDEntryType
             message.addGroup(group)
 
-        message.setField(265, "0") #MDUpdateType
+        message.setField(265, adapter_attr["MDUpdateType"]) #MDUpdateType
 
         if self.delivertocompID != "":
             header.setField(128, self.delivertocompID) #DeliverToCompID
         if self.sendersubID != "":
             header.setField(50, self.sendersubID) #SenderSubID
 
-        message.setField(167, "FOR") #SecurityType
+        message.setField(167, adapter_attr["SecurityType"]) #SecurityType
 
         group = quickfix43.MarketDataRequest().NoRelatedSym()
 
-        for symbol in self.symbols.split(";"):
+
+        for symbol,product in zip(adapter_attr["symbols"].split(";"),adapter_attr["products"].split(";")):
             group.setField(55, symbol) #Symbol
-            group.setField(460, "4") #Product
+            group.setField(460, product) #Product
             message.addGroup(group)
 
         msg = message.toString().replace(__SOH__, "|")
+        self.log_info(f"Market subscription : {msg}")
         self.log_info(f"Market subscription : {msg}")
            
         quickfix.Session.sendToTarget(message, self.sessionID)

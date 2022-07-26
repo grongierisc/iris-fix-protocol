@@ -91,7 +91,7 @@ class FixQuoteOperation(BusinessOperation):
         settings_dict = session_settings.get()
         
         # We get all the attr that are in self but not in the base BusinessOperation class
-        config_attr = set(dir(self)).difference(set(dir(BusinessOperation))).difference(set(['generate_message','new_request']))
+        config_attr = set(dir(self)).difference(set(dir(BusinessOperation))).difference(set(['generate_message','new_request','get_info','adapter_attr']))
 
         # For every one of them we add them to the settings using the setString method ( replace it if exists, create it if not)
         for attr in config_attr:
@@ -143,6 +143,8 @@ class FixQuoteOperation(BusinessOperation):
         except Exception as e:
             self.log_info(str(e))
 
+    def get_info(self):
+        return self.adapter_attr
 
     def generate_message(self,message,book=None):
         resp = Response()

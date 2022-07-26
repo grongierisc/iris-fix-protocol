@@ -53,10 +53,15 @@ ResetOnDisconnect=Y
 SendRedundantResendRequests=Y
 SocketNodelay=N
 ValidateUserDefinedFields=N
-ValidateFieldsOutOfOrder=N
-symbols=EUR/USD
-depth=0</Setting>
+ValidateFieldsOutOfOrder=N</Setting>
     <Setting Target="Adapter" Name="KeepaliveInterval">1</Setting>
+    <Setting Target="Adapter" Name="%settings">subscribe=True
+MarketDepth=0
+MDUpdateType=0
+SecurityType=FOR
+md_types=0;1
+symbols=EUR/USD;USD/CZK
+products=4;4</Setting>
   </Item>
   <Item Name="Python.FixBusinessProcess" Category="" ClassName="Python.FixBusinessProcess" PoolSize="1" Enabled="true" Foreground="false" Comment="" LogTraceEvents="false" Schedule="">
   </Item>

@@ -104,12 +104,23 @@ SendRedundantResendRequests=Y
 SocketNodelay=N
 ValidateUserDefinedFields=N
 ValidateFieldsOutOfOrder=N
-symbols=EUR/USD
-depth=0
 ```
 
-Note that symbols represent a list of fix symbol, it should be used like this :
+If you want to modify the parameters of the Market Subscription, click on the `Python.FixQuote` then go to `settings` in the right tab, then in the `Python Adapter` part, then in the `%settings` part.
+Here, you can enter or modify any parameters ( don't forget to press `apply` once your are done ).<br>
+Here's the default configuration for the Fix Order adapter:
+```
+subscribe=True
+MarketDepth=0
+MDUpdateType=0
+SecurityType=FOR
+md_types=0;1
+symbols=EUR/USD;USD/CZK
+products=4;4
+```
+Note that symbols and product works together and represent a list of fix symbol + product, it should be used like this :
 symbols=EUR/USD;EUR/CZK;USD/CZK
+products=4;4;4
 
 Now, on start/restart, the new configuration will apply and the new sessions will be created.
 
