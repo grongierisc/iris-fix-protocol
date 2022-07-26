@@ -154,6 +154,8 @@ msg.Request
 Now you can click on `Visual Trace` to see in details what happened and see the logs of the initiator.
 
 
+**Note** that for now the acceptor doesn't work with quote request and a trick is used to make it work. If your acceptor/server works with quote, you must delete from `bo.py` the lines 137 to 141 and uncomment the lines 133 to 135.
+
 ### Send an order
 
 You must first start the demo, using the green `Start` button or `Stop` and `Start` it again to apply your config changes.
