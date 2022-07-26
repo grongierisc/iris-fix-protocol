@@ -71,7 +71,7 @@ class FixOrderOperation(BusinessOperation):
                     message.setField(int(tag),value)
                     
             if request.group_field:
-                if msgtype != None:
+                if msgtype != None and self.tree != None:
                     root = self.tree.getroot()
                     msg_name = root.find(f"messages/message[@msgtype='{msgtype}']").get('name')
                     for group_tag, list_group_tag in request.group_field.__dict__.items():
@@ -168,7 +168,7 @@ class FixQuoteOperation(BusinessOperation):
                     message.setField(int(tag),value)
                     
             if request.group_field:
-                if msgtype != None:
+                if msgtype != None and self.tree != None:
                     root = self.tree.getroot()
                     msg_name = root.find(f"messages/message[@msgtype='{msgtype}']").get('name')
                     for group_tag, list_group_tag in request.group_field.__dict__.items():
