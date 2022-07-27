@@ -1,1 +1,2 @@
 prettytable==3.3.0
+./quickfix-1.15.1-cp38-cp38-linux_x86_64.whl

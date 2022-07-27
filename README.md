@@ -150,22 +150,24 @@ msg.Request
 
  And for the `json`, here is an example of quote request :
 ```
+{
+"header_field":
     {
-    "header_field":
+        "35":"R"
+    },
+"group_field":
+    {
+        "146":
         {
-            "35":"R"
-        },
-    "message_field":
-        {
-            "55": "EUR/USD",
-            "40": "1"
+            "40":"1;2",
+            "55":"EUR/USD;USD/CZK"
         }
     }
+}
 ```
 Now you can click on `Visual Trace` to see in details what happened and see the logs of the initiator.
 
 
-**Note** that for now the acceptor doesn't work with quote request and a trick is used to make it work. If your acceptor/server works with quote, you must delete from `bo.py` the lines 137 to 141 and uncomment the lines 133 to 135.
 
 ### Send an order
 
@@ -189,23 +191,57 @@ msg.Request
 
  And for the `json`, here is an example of a simple buy order :
 ```
+{
+"header_field":
     {
-    "header_field":
-        {
-            "35":"D"
-        },
-    "message_field":
-        {
-            "55": "EUR/USD",
-            "44": "100",
-            "38": "10000",
-            "54": "1",
-            "40": "1",
-            "21": "1"
-        }
+        "35":"D"
+    },
+"message_field":
+    {
+        "55": "EUR/USD",
+        "40": "1",
+        "44": "100",
+        "38": "10000",
+        "54": "1",
+        "21": "1"
     }
+}
 ```
 Now you can click on `Visual Trace` to see in details what happened and see the logs of the initiator.
+
+### Send a Quote before the Order
+This, is application logic, it depends on how your spec are working and how your server process messages.
+In our example, we can use the `Fix.BusinessProcess` with this :
+
+Type of request : `Grongier.PEX.Message`<br>
+
+For the `classname` you must enter :
+```
+msg.Request
+```
+
+ And for the `json`, here is an example of a simple buy order :
+```
+{
+"header_field":
+    {
+        "35":"D"
+    },
+"message_field":
+    {
+        "55": "EUR/USD",
+        "40": "1",
+        "44": "100",
+        "38": "10000",
+        "54": "1",
+        "21": "1"
+    }
+}
+```
+
+It's the same a an Order request, but in the process we will automatically send a Quote request before, with the right information needed, then send the Order request.
+
+By clicking on the `Visual Trace` you can see the whole messages
 
 ## Using the server demo : Acceptor
 

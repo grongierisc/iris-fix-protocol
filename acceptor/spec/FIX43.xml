@@ -817,7 +817,7 @@
    <field name='AccountType' required='N' />
    <field name='TradingSessionID' required='N' />
    <field name='TradingSessionSubID' required='N' />
-   <component name='Instrument' required='Y' />
+   <component name='Instrument' required='N' />
    <field name='BidPx' required='N' />
    <field name='OfferPx' required='N' />
    <field name='MktBidPx' required='N' />

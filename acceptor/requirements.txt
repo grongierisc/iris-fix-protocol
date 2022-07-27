@@ -1,1 +1,2 @@
 prettytable==3.3.0
+./quickfix_binary-1.15.1-cp39-cp39-manylinux_2_24_x86_64.manylinux_2_27_x86_64.whl

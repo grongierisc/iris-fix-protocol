@@ -16,18 +16,22 @@ class FixBusinessProcess(BusinessProcess):
             msg_type = getattr(request.header_field,"35")
 
             if msg_type == "D":
+                hdr_field = HeaderField()
                 msg_field = MessageField()
+                grp_field = GroupField()
 
-                setattr(msg_field,"55",getattr(request.message_field,"55"))
-                setattr(msg_field,"13","2")
-                setattr(msg_field,"40",getattr(request.message_field,"40"))
 
-                quote_req = Request(msg_field)
+                grp_body = {"40":getattr(request.message_field,"40"),"55":getattr(request.message_field,"55")}
+                
+                setattr(hdr_field,"35","R")
+                setattr(grp_field,"146",grp_body)
+
+                quote_req = Request(hdr_field,msg_field,grp_field)
             
                 quote_resp = self.send_request_sync("Python.FixQuote",quote_req)
 
                 if quote_resp.msg != "Time Out 5s":
-                    setattr(request.message_field,"117",getattr(quote_resp,"117"))
+                    setattr(request.message_field,"117",getattr(quote_resp.message_field,"117"))
                     order_resp = self.send_request_sync("Python.FixOrder",request)
                     return order_resp
                 else:

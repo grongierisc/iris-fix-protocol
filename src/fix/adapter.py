@@ -309,7 +309,7 @@ class QuoteAdapter(quickfix.Application,OutboundAdapter):
 
             msg = message.toString().replace(__SOH__, "|")
             self.log_info(f"Market subscription : {msg}")
-            
+            self.host.send_request_async("Python.FixBusinessProcess",self.host.generate_message(message))
             quickfix.Session.sendToTarget(message, self.sessionID)
 
     def unsubscription(self):
@@ -352,7 +352,6 @@ class QuoteAdapter(quickfix.Application,OutboundAdapter):
             message.addGroup(group)
 
         msg = message.toString().replace(__SOH__, "|")
-        self.log_info(f"Market subscription : {msg}")
         self.log_info(f"Market subscription : {msg}")
            
         quickfix.Session.sendToTarget(message, self.sessionID)

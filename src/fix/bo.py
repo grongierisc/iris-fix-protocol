@@ -4,6 +4,7 @@ import quickfix
 import quickfix43
 
 from msg import Request,Response
+from obj import HeaderField,MessageField,GroupField
 
 import xml.etree.ElementTree as ET
 
@@ -95,14 +96,34 @@ class FixOrderOperation(BusinessOperation):
         except Exception as e:
             self.log_info(str(e))
 
-    def generate_message(self,message):
-        resp = Response()
-        resp.msg = message if type(message) == str else message.toString().replace(__SOH__, "|")
-        if message != "Time Out 5s":
-            for pair in resp.msg.split("|"):
-                if pair != "":
-                    tag,value = pair.split("=")
-                    setattr(resp, tag, value)
+    def generate_message(self,message,book=None):
+        if type(message) == str:   
+            resp = Response()
+            resp.msg = message
+        else:
+            hdr_field = HeaderField()
+            msg_field = MessageField()
+            grp_field = GroupField()
+            base_msg = message.toString().replace(__SOH__, "|")
+            root = ET.fromstring(message.toXML())
+
+            for field in root.findall(f"header/field"):
+                setattr(hdr_field,field.get('number'),field.text)
+
+            for field in root.findall("body/field"):
+                setattr(msg_field,field.get('number'),field.text)
+
+            ctn = 0
+            for group in root.findall("body/group"):
+                temp = {}
+                for field in group.findall("field"):
+                    temp[field.get('number')] = field.text
+                setattr(grp_field,f"grp{ctn}",temp)
+                ctn+=1
+                
+            resp = Response(hdr_field,msg_field,grp_field,base_msg)
+        if book:
+            resp.book = book
         return resp
 
 class FixQuoteOperation(BusinessOperation):
@@ -187,15 +208,9 @@ class FixQuoteOperation(BusinessOperation):
                                     group.setField(int(tag_list[j]),values_list[j][i])                                
                             message.addGroup(group)
 
-            # appResp = self.adapter.send_msg(message)
-            # msg = self.generate_message(appResp)
-            # return msg
-
-            # To delete if acceptor can manage quote request
-            temp = Response()
-            temp.msg = "Temp"
-            setattr(temp,"117","1")
-            return temp
+            appResp = self.adapter.send_msg(message)
+            msg = self.generate_message(appResp)
+            return msg
 
         except Exception as e:
             self.log_info(str(e))
@@ -203,14 +218,33 @@ class FixQuoteOperation(BusinessOperation):
     def get_info(self):
         return self.adapter_attr
 
+
     def generate_message(self,message,book=None):
-        resp = Response()
-        if book != None:
+        if type(message) == str:   
+            resp = Response()
+            resp.msg = message
+        else:
+            hdr_field = HeaderField()
+            msg_field = MessageField()
+            grp_field = GroupField()
+            base_msg = message.toString().replace(__SOH__, "|")
+            root = ET.fromstring(message.toXML())
+
+            for field in root.findall(f"header/field"):
+                setattr(hdr_field,field.get('number'),field.text)
+
+            for field in root.findall("body/field"):
+                setattr(msg_field,field.get('number'),field.text)
+
+            ctn = 0
+            for group in root.findall("body/group"):
+                temp = {}
+                for field in group.findall("field"):
+                    temp[field.get('number')] = field.text
+                setattr(grp_field,f"grp{ctn}",temp)
+                ctn+=1
+                
+            resp = Response(hdr_field,msg_field,grp_field,base_msg)
+        if book:
             resp.book = book
-        resp.msg = message if isinstance(message, str) else message.toString().replace(__SOH__, "|")
-        if resp.msg != "Time Out 5s":
-            for pair in resp.msg.split("|"):
-                if pair != "":
-                    tag,value = pair.split("=")
-                    setattr(resp, tag, value)
         return resp
