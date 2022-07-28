@@ -8,7 +8,7 @@ FIX has become the language of the global financial markets used extensively by 
 This demo has for objective to simulate a FIX client, allowing the user to create multiple sessions connected to a server ( fix acceptor ) and send buy or sell requests.
 
 # Requirements and information
-- [QuickFix](https://quickfixengine.org/c/) will be installed automatically when building ( takes 10 to 20 minutes to build once )
+- [QuickFix](https://quickfixengine.org/c/) will be installed automatically when building
 - If you use VSCode, you should have seen some pop up in the right corner, if you press `open in container` all the needed extensions will be installed but this step is not necessary.
 
 See [this website](https://new.quickfixn.org/c/documentation/) for the general documentation.<br>
